@@ -1,0 +1,82 @@
+install praat:
+wget http://www.fon.hum.uva.nl/praat/praat6031_linux64.tar.gz
+tar -zxvf praat6031_linux64.tar.gz
+.... AND SO ON...
+OR apt-get install praat
+
+install scipy:
+python -m pip install --upgrade pip
+pip install --user numpy scipy matplotlib ipython jupyter pandas sympy nose
+add to ~/.bashrc file: export PATH="$PATH:/home/your_user/.local/bin"
+
+
+
+
+
+
+install pyAcoustics:
+git clone https://github.com/timmahrt/pyAcoustics.git
+cd ./pyAcoustics
+python setup.py install
+
+
+
+
+
+
+
+
+yaafe: (python 2.7)
+windowsize = 1024/samplerate
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------
+apt-get install python-dev
+apt-get install python-pip
+
+apt-get install libpng-dev
+
+#install miniconda
+wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
+./Miniconda2-latest-Linux-x86_64.sh
+PATH=$PATH:$HOME/miniconda2/bin/
+
+conda install numpy
+conda install scipy
+conda install matplotlib
+conda install ipython
+conda install jupyter
+conda install pandas
+conda install sympy
+conda install nose
+conda install -c https://conda.anaconda.org/yaafe yaafe
+pip install python_speech_features
+apt install libgl1-mesa-swx11
+pip install librosa
+apt-get install praat
+
+#install pyAcoustics:
+git clone https://github.com/timmahrt/pyAcoustics.git
+cd ./pyAcoustics
+python setup.py install
+
+
+
+
+
+
+
+
+
+
+
