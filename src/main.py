@@ -155,9 +155,9 @@ WINDOW_STEP = 10.
 def extract_mfcc(filename):
     (rate,sig) = wav.read( filename )
     
-    #print("Signal: {}".format( WINDOW_SIZE/1000 ))
+    print("rt: {}".format( rate ))
 
-    #nfft changed to the same number of frame length, because the frame was been truncated
+    #nfft changed to the same number of frame length, because the frame was being truncated
     mfcc_feat = mfcc(sig, rate, WINDOW_SIZE/1000, WINDOW_STEP/1000, nfft=1103)
 
     #default inputs (from documentation)
@@ -171,7 +171,14 @@ def extract_mfcc(filename):
     print(mfcc_feat)
 #    return mfcc_feat #return breaks I dont know why yet
 
+#import librosa
 
+def extract_energy(filename):
+    pass
+    
+    #mtd from librosa
+    #Compute root-mean-square (RMS) energy for each frame, either from the audio samples y or from a spectrogram S.
+    #rmse([y, S, frame_length, hop_length, ...])
 
 def extract_pitch(filename):
     print( 'Extracting pitch for {}'.format(filename) )
@@ -196,7 +203,7 @@ def extract_pitch(filename):
     # Produce output
     plt.savefig(args.output, dpi=96)
 
-
+    
 
 
 
