@@ -97,6 +97,25 @@ def extract_pitch(filename):
 
     return []
 
+def training_model( features ):
+    print(__doc__)
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    from hmmlearn import hmm
+
+    np.random.seed(42)
+    model = hmm.GaussianHMM(n_components=3, covariance_type="full")
+    model.startprob_ = np.array([0.6, 0.3, 0.1])
+    model.transmat_ = np.array([[0.7, 0.2, 0.1], [0.3, 0.5, 0.2], [0.3, 0.3, 0.4]])
+    model.means_ = np.array([[0.0, 0.0], [3.0, -3.0], [5.0, 10.0]])
+    model.covars_ = np.tile(np.identity(2), (3, 1, 1))
+    X, Z = model.sample(100)
+
+    print(X)
+    print(Z)
+
 def read_all_audio_files_from_path( path ):
     ret = os.listdir(path)
 
@@ -117,6 +136,9 @@ if __name__ == '__main__':
         #pitch = extract_pitch(filename)
         #extract_mfcc(filename)
         extract_energy(filename)
+
+        training_model( true )
+
         break
 
     # extract_parameters()
