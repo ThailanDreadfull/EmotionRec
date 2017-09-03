@@ -134,12 +134,12 @@ def training_model( features ):
 
     # Pack energy and other features for training.
     X = np.column_stack([energy, energy_2])
-
+    print(X)
 
     print("fitting to HMM and decoding ...", end="")
 
     # Make an HMM instance and execute fit
-    model = GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
+    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
 
     # Predict the optimal sequence of internal hidden state
     hidden_states = model.predict(X)
@@ -325,7 +325,7 @@ if __name__ == '__main__':
         #pitch = extract_pitch(filename)
         #extract_mfcc(filename)
 
-        print( ftrs )
+        #print( ftrs )
 
         training_model( ftrs )
         # test()
