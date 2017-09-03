@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+
+from __future__ import print_function
+
 import sys
 import os
 import argparse
@@ -98,23 +101,115 @@ def extract_pitch(filename):
     return []
 
 def training_model( features ):
-    print(__doc__)
-
+    import warnings
+    warnings.filterwarnings('ignore')
+    
     import numpy as np
+    import matplotlib
+    matplotlib.use('agg')
     import matplotlib.pyplot as plt
-
     from hmmlearn import hmm
 
     np.random.seed(42)
-    model = hmm.GaussianHMM(n_components=3, covariance_type="full")
-    model.startprob_ = np.array([0.6, 0.3, 0.1])
-    model.transmat_ = np.array([[0.7, 0.2, 0.1], [0.3, 0.5, 0.2], [0.3, 0.3, 0.4]])
-    model.means_ = np.array([[0.0, 0.0], [3.0, -3.0], [5.0, 10.0]])
-    model.covars_ = np.tile(np.identity(2), (3, 1, 1))
-    X, Z = model.sample(100)
+    #model = hmm.GaussianHMM(n_components=3, covariance_type="full")
+    #model.startprob_ = np.array([0.6, 0.3, 0.1])
+    #model.transmat_ = np.array([[0.7, 0.2, 0.1], [0.3, 0.5, 0.2], [0.3, 0.3, 0.4]])
+    #model.means_ = np.array([[0.0, 0.0], [3.0, -3.0], [5.0, 10.0]])
+    #model.covars_ = np.tile(np.identity(2), (3, 1, 1))
+    #X, Z = model.sample(500)
 
+    #print(X)
+    #print(Z)
+    
+
+    startprob = np.array([0.6, 0.3, 0.1, 0.0])
+    # The transition matrix, note that there are no transitions possible
+    # between component 1 and 3
+    transmat = np.array([[0.7, 0.2, 0.0, 0.1],
+                     [0.3, 0.5, 0.2, 0.0],
+                     [0.0, 0.3, 0.5, 0.2],
+                     [0.2, 0.0, 0.2, 0.6]])
+    # The means of each component
+    means = np.array([[0.0,  0.0],
+                  [0.0, 11.0],
+                  [9.0, 10.0],
+                  [11.0, -1.0]])
+    # The covariance of each component
+    covars = .5 * np.tile(np.identity(2), (4, 1, 1))
+
+    # Build an HMM instance and set parameters
+    model = hmm.GaussianHMM(n_components=4, covariance_type="full")
+
+    # Instead of fitting it from the data, we directly set the estimated
+    # parameters, the means and covariance of the components
+    model.startprob_ = startprob
+    model.transmat_ = transmat
+    model.means_ = means
+    model.covars_ = covars
+
+
+
+
+    X, Z = model.sample(500)
+
+    #print(Z)
     print(X)
-    print(Z)
+    
+    # Plot the sampled data
+    plt.plot(X[:, 0], X[:, 1], ".-", label="observations", ms=6, mfc="orange", alpha=0.7)
+
+    # Indicate the component numbers
+    for i, m in enumerate(means):
+        print("{}  {}".format(i, m))
+        plt.text(m[0], m[1], 'Component %i' % (i + 1), size=17, horizontalalignment='center', 
+                 bbox=dict(alpha=.7, facecolor='w'))
+
+    plt.legend(loc='best')
+    plt.show()
+
+    plt.savefig('foo.png')
+
+
+def test():
+
+    #from __future__ import print_function
+
+    import datetime
+
+    import numpy as np
+    from matplotlib import cm, pyplot as plt
+    from matplotlib.dates import YearLocator, MonthLocator
+    try:
+        from matplotlib.finance import quotes_historical_yahoo_ochl
+    except ImportError:
+        # For Matplotlib prior to 1.5.
+        from matplotlib.finance import ( quotes_historical_yahoo as quotes_historical_yahoo_ochl )
+
+    from hmmlearn.hmm import GaussianHMM
+
+
+    print(__doc__)
+
+
+
+
+
+
+    print("fitting to HMM and decoding ...", end="")
+
+    # Make an HMM instance and execute fit
+    model = GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
+
+    # Predict the optimal sequence of internal hidden state
+    hidden_states = model.predict(X)
+
+    print("done")
+
+
+
+
+
+
 
 def read_all_audio_files_from_path( path ):
     ret = os.listdir(path)
@@ -135,9 +230,10 @@ if __name__ == '__main__':
     for filename in filenames:
         #pitch = extract_pitch(filename)
         #extract_mfcc(filename)
-        extract_energy(filename)
+        #extract_energy(filename)
 
-        training_model( true )
+        #training_model( True )
+        test()
 
         break
 
