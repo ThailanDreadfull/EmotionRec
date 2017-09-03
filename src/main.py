@@ -56,7 +56,7 @@ def extract_energy_with_yaafe(filename):
 
 
 import librosa
-def extract_energy(filename):
+def extract_energy(filename): #WORKING FUCKKKKKKKKK!!!!!!!
     
     # 1ms = 22 samples, so 25ms = 550 samples
     sig, sample_rate = librosa.load( filename )
@@ -65,8 +65,7 @@ def extract_energy(filename):
     energy = librosa.feature.rmse( y=sig, frame_length=550 )
     #librosa.rmse([audio_signal, spectrogram_magnitude, frame_length, hop_length, ...])
     
-    #print( str( len(sig) ) )
-    print(energy)
+    return energy
 
 
 def extract_pitch(filename):
@@ -100,16 +99,107 @@ def extract_pitch(filename):
 
     return []
 
-def training_model( features ):
-    import warnings
-    warnings.filterwarnings('ignore')
-    
-    import numpy as np
-    import matplotlib
-    matplotlib.use('agg')
-    import matplotlib.pyplot as plt
-    from hmmlearn import hmm
 
+import numpy as np
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+from hmmlearn import hmm
+
+def training_model( features ):
+    # import warnings
+    # warnings.filterwarnings('ignore')
+
+
+    energy = np.array(features[0])
+    import copy
+    energy_2 = copy.deepcopy(energy)
+
+
+    # quotes = quotes_historical_yahoo_ochl(
+    #     "INTC", datetime.date(1995, 1, 1), datetime.date(2012, 1, 6))
+
+    # Unpack quotes
+    # dates = np.array([q[0] for q in quotes], dtype=int)
+    # close_v = np.array([q[2] for q in quotes])
+    # volume = np.array([q[5] for q in quotes])[1:]
+
+    # Take diff of close value. Note that this makes
+    # ``len(diff) = len(close_t) - 1``, therefore, other quantities also
+    # need to be shifted by 1.
+    # diff = np.diff(close_v)
+    # dates = dates[1:]
+    # close_v = close_v[1:]
+
+
+    # Pack energy and other features for training.
+    X = np.column_stack([energy, energy_2])
+
+
+    print("fitting to HMM and decoding ...", end="")
+
+    # Make an HMM instance and execute fit
+    model = GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
+
+    # Predict the optimal sequence of internal hidden state
+    hidden_states = model.predict(X)
+    print(hidden_states)
+
+
+    print("done")
+
+
+
+
+
+
+
+
+    # model = hmm.GaussianHMM(n_components=1, covariance_type="full")
+    # model.energy_ = energy
+    #
+    # X, Z = model.sample(500)
+    # print(X)
+    # print(Z)
+
+
+
+
+
+
+
+    ################### Printing result #################
+    print("Transition matrix")
+    print(model.transmat_)
+    print()
+
+    print("Means and vars of each hidden state")
+    for i in range(model.n_components):
+        print("{0}th hidden state".format(i))
+        print("mean = ", model.means_[i])
+        print("var = ", np.diag(model.covars_[i]))
+        print()
+    ######################################################
+
+    ################# Plot the sampled data #############
+    # plt.plot(X[:, 0], X[:, 1], ".-", label="observations", ms=6, mfc="orange", alpha=0.7)
+    #
+    # # Indicate the component numbers
+    # for i, m in enumerate(means):
+    #     print("{}  {}".format(i, m))
+    #     plt.text(m[0], m[1], 'Component %i' % (i + 1), size=17, horizontalalignment='center',
+    #              bbox=dict(alpha=.7, facecolor='w'))
+    #
+    # plt.legend(loc='best')
+    # plt.show()
+    #
+    # plt.savefig('foo.png')
+    ######################################################
+
+
+def training_model_old( features ):
+
+    ############### old ####################
     np.random.seed(42)
     #model = hmm.GaussianHMM(n_components=3, covariance_type="full")
     #model.startprob_ = np.array([0.6, 0.3, 0.1])
@@ -120,20 +210,24 @@ def training_model( features ):
 
     #print(X)
     #print(Z)
+
+    ########################################
     
 
     startprob = np.array([0.6, 0.3, 0.1, 0.0])
     # The transition matrix, note that there are no transitions possible
     # between component 1 and 3
     transmat = np.array([[0.7, 0.2, 0.0, 0.1],
-                     [0.3, 0.5, 0.2, 0.0],
-                     [0.0, 0.3, 0.5, 0.2],
-                     [0.2, 0.0, 0.2, 0.6]])
+                         [0.3, 0.5, 0.2, 0.0],
+                         [0.0, 0.3, 0.5, 0.2],
+                         [0.2, 0.0, 0.2, 0.6]])
+
     # The means of each component
     means = np.array([[0.0,  0.0],
-                  [0.0, 11.0],
-                  [9.0, 10.0],
-                  [11.0, -1.0]])
+                      [0.0, 11.0],
+                      [9.0, 10.0],
+                      [11.0, -1.0]])
+
     # The covariance of each component
     covars = .5 * np.tile(np.identity(2), (4, 1, 1))
 
@@ -148,10 +242,7 @@ def training_model( features ):
     model.covars_ = covars
 
 
-
-
     X, Z = model.sample(500)
-
     #print(Z)
     print(X)
     
@@ -228,12 +319,16 @@ if __name__ == '__main__':
     filenames = read_all_audio_files_from_path(path_to_read_files)
 
     for filename in filenames:
+        ftrs = []
+        ftrs.append( extract_energy(filename) )
+
         #pitch = extract_pitch(filename)
         #extract_mfcc(filename)
-        #extract_energy(filename)
 
-        #training_model( True )
-        test()
+        print( ftrs )
+
+        training_model( ftrs )
+        # test()
 
         break
 
