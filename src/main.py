@@ -106,6 +106,29 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from hmmlearn import hmm
 
+
+
+
+
+def training_model_s( features ):
+    import numpy as np
+    from hmmlearn import hmm
+
+    model = hmm.MultinomialHMM(n_components=3)
+    model.startprob_ = np.array([0.3, 0.4, 0.3])
+    model.transmat_ = np.array([[0.2, 0.6, 0.2],
+                                [0.4, 0.0, 0.6],
+                                [0.1, 0.2, 0.7]])
+    model.emissionprob_ = np.array([[0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+                                    [0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1],
+                                    [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2]])
+
+    # Predict the optimal sequence of internal hidden state
+    X = np.atleast_2d([3, 4, 5, 6, 7]).T
+    print(model.decode(X))
+
+
+
 def training_model( features ):
     # import warnings
     # warnings.filterwarnings('ignore')
@@ -139,7 +162,7 @@ def training_model( features ):
     print("fitting to HMM and decoding ...", end="")
 
     # Make an HMM instance and execute fit
-    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
+    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X, 1)
 
     # Predict the optimal sequence of internal hidden state
     hidden_states = model.predict(X)
