@@ -154,15 +154,21 @@ def training_model( features ):
     # dates = dates[1:]
     # close_v = close_v[1:]
 
+    X1 = np.array(features[0])
+    X2 = np.array(features[0])
+    X = np.concatenate([X1, X2])
+    lengths = [len(X1), len(X2)]
+
 
     # Pack energy and other features for training.
-    X = np.column_stack([energy, energy_2])
+    #X = np.column_stack([energy, energy_2])
+    #lengths = [len(X[0])]
     print(X)
 
     print("fitting to HMM and decoding ...", end="")
 
     # Make an HMM instance and execute fit
-    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X, 1)
+    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X, lengths)
 
     # Predict the optimal sequence of internal hidden state
     hidden_states = model.predict(X)

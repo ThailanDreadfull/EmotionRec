@@ -1,0 +1,16 @@
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in SMILExtract : openSMILE starting!
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in SMILExtract : config file is: ./demo1.conf
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in cComponentManager : successfully registered 95 component types.
+==> LEVEL 'wave'  +++  Buffersize(frames) = 88201  +++  nReaders = 1
+==> LEVEL 'waveframes'  +++  Buffersize(frames) = 3  +++  nReaders = 1
+==> LEVEL 'energy'  +++  Buffersize(frames) = 3  +++  nReaders = 1
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in cComponentManager : successfully finished createInstances
+                                 (4 component instances were finalised, 1 data memories were finalised)
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in cComponentManager : starting single thread processing loop
+[ 04.09.2017 - 21:57:52 ]
+    (MSG) [2] in cComponentManager : Processing finished! System ran for 186 ticks.
