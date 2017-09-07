@@ -78,12 +78,19 @@ pip install h5py
 
 
 
+SMILExtract -cfgFileTemplate -configDflt cWaveSource,cFramer,cEnergy,cCsvSink -l 1 2> ./demo1.conf
+
+SMILExtract -C myconfig/demo1.conf -I wav\_samples/speech01.wav -O speech01.energy.csv
 
 
 
 
+SMILExtract -C features_config_files/demo1.conf -I audio_sample/irritado-female-2.wav -O extracted_features/irritado-female-2.energy.csv
 
 
+
+grep -R "formant" ./
+./gemaps/eGeMAPSv01a_core.lld.conf.inc
 
 
 
