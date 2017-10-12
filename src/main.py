@@ -1,368 +1,287 @@
 #!/usr/bin/env python
 
-
-from __future__ import print_function
-
-import sys
 import os
+from collections import OrderedDict
+from sys import platform
+from pyAudioAnalysis import audioTrainTest as aT
 import argparse
+import time
+import sys
+sys.path.append('C:\dev\emotion_speech_recognition\src\dependencies\pyAudioAnalysis')
+
+
+def print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name):
+    print "\n=============== {} ================".format( "SVM" if use_svm else "KNN")
+    print "Parameters for model '{}'".format(model_name)
+    print
+    print "Short term window: {}".format(st_w)
+    print "Short term step: {}".format(st_s)
+    print "Mid term window: {}".format(mt_w)
+    print "Mid term step: {}".format(mt_s)
+    print "Utilizing {:.0f}% of samples for training".format( perc_train * 100 )
+    print "===================================="
+
+def feature_and_train(samples_prefix, st_w, st_s, mt_w, mt_s, perc_train, confusion_matrix_perc, use_svm, verbosity, model_name):
+    start = time.time()
+
+    list_of_dirs_or_classes = []
+    dirs = [d for d in os.listdir(samples_prefix) if os.path.isdir(os.path.join(samples_prefix, d))]
+    for dire in dirs:
+        list_of_dirs_or_classes.append(samples_prefix + str(dire))
+
+    if use_svm:
+        print "Starting training..."
+
+        model_name = "models/SVM_"+model_name
+
+        print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name)
+        bestParam, bestAcc = aT.featureAndTrain(list_of_dirs_or_classes, mt_w, mt_s, st_w, st_s, "svm", model_name, False, perc_train, confusion_matrix_perc, verbosity=verbosity)
+    else:
+        print "Starting training..."
+
+        model_name = "models/KNN_"+model_name
+
+        print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name)
+        bestParam, bestAcc = aT.featureAndTrain(list_of_dirs_or_classes, mt_w, mt_s, st_w, st_s, "knn", model_name, False, perc_train, confusion_matrix_perc, verbosity=verbosity)
+
+    end = time.time()
+    print "Finished in {:10.2f} seconds".format(end-start)
+    return bestAcc
+
+def test_model(prefix, model, use_svm):
+    dirs = os.listdir(prefix)
+
+    model = ("models/SVM_" + model) if use_svm else ("models/KNN_" + model)
+
+    print "\nTesting model: {}".format(model)
+    print "Confusion Matrix:"
+    for d in dirs:
+        print "\t{}".format(d[:4]),
+    print
+
+    total_correct = 0
+    total_files = 0
+    for classs in dirs:
+        files = os.listdir(prefix+classs)
+        class_files_num = len(files)
+        total_files = total_files+class_files_num
+        classified = OrderedDict()
+        for dir in dirs:
+            classified[dir] = 0
+
+        print "{}\t".format(classs[:4]),
+        for file in files:
+            #test file
+            file_to_test = prefix+classs+"/"+file
+            class_classified = test_file(file_to_test, model, use_svm)
+            classified[class_classified] = classified[class_classified]+1
+            if class_classified == classs:
+                total_correct = total_correct+1
+
+        for key in classified.keys():
+            print "{}\t".format( round((classified[key]/float(class_files_num))*100,2) ),
+        print
+    print
+
+    print "General precision is {}".format( round(total_correct/float(total_files)*100,2) )
+
+def test_file(filename_to_test, model_name, use_svm=True):
+
+    if os.path.isfile(filename_to_test):
+        start = time.time()
+        if use_svm:
+            r, P, classNames = aT.fileClassification(filename_to_test, model_name, "svm")
+            # print filename_to_test
+            # print P
+        else:
+            r, P, classNames = aT.fileClassification(filename_to_test, model_name, "svm")
+
+        chosen = 0.0
+        chosenClass = ""
+        if len(P) == len(classNames):
+            for i in range(0, len(P), 1):
+
+                if P[i] > chosen:
+                    chosen = P[i]
+                    chosenClass = classNames[i]
+
+        end = time.time()
+        # print "\n\nThe audio file was classified as {} with prob {}% in {:10.2f} seconds\n\n".format(chosenClass, round(chosen*100, 2), end - start )
+        return chosenClass
+    else:
+        print "File doesnt exists: {}".format(filename_to_test)
+        return None
 
-#import numpy as np
-#from scipy import special, optimize
-#import matplotlib.pyplot as plt
+def train_SVM(model_name):
+    SHORT_TERM_WINDOW = 0.036
+    SHORT_TERM_STEP = 0.012
+    MID_TERM_WINDOW = 1.3
+    MID_TERM_STEP = 0.65
 
-from python_speech_features import mfcc
-import scipy.io.wavfile as wav
+    confusion_matrix_perc = True
+    use_svm = True
+    perc_train = 0.75
+    VERBOSITY = False
 
+    feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+                                 perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
+def train_KNN(model_name):
+    SHORT_TERM_WINDOW = 0.036
+    SHORT_TERM_STEP = 0.012
+    MID_TERM_WINDOW = 1.3
+    MID_TERM_STEP = 0.65
 
+    confusion_matrix_perc = True
+    use_svm = False
+    perc_train = 0.75
+    VERBOSITY = False
 
+    feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+                                 perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
-# All values in ms
-WINDOW_SIZE = 25.
-WINDOW_STEP = 10.
 
-#### FUNCIONANDO OK
-def extract_mfcc(filename):
-    (rate,sig) = wav.read( filename )
-    
-    print("rt: {}".format( rate ))
 
-    #nfft changed to the same number of frame length, because the frame was being truncated
-    mfcc_feat = mfcc(sig, rate, WINDOW_SIZE/1000, WINDOW_STEP/1000, nfft=1103)
 
-    #default inputs (from documentation)
-    #mfcc_feat = mfcc(sig,samplerate=16000,winlen=0.025,winstep=0.01,numcep=13,
-    #             nfilt=26,nfft=512,lowfreq=0,highfreq=None,preemph=0.97, ceplifter=22,appendEnergy=True)
-    
-    #not used for now...
-    #d_mfcc_feat = delta(mfcc_feat, 2)
-    #fbank_feat = logfbank(sig,rate)
+def brute_force_training(multiclassifier):
+    min_st   = 0.020
+    max_st   = 0.100
+    step_st  = 0.001
+    st_overl = 0.4
 
-    print(mfcc_feat)
-#    return mfcc_feat #return breaks I dont know why yet
+    min_mt   = 1.200
+    max_mt   = 2.1
+    step_mt  = 0.100
+    mt_overl = 0.5
 
 
+    MID_TERM_WINDOW = min_mt
+    MID_TERM_STEP = round(MID_TERM_WINDOW*mt_overl, 3)
+    SHORT_TERM_WINDOW = min_st
+    SHORT_TERM_STEP = round(SHORT_TERM_WINDOW*st_overl, 3)
 
+    confusion_matrix_perc = True
+    use_svm = True
+    perc_train = 0.75
+    VERBOSITY = False
 
-import yaafelib
-import h5py
+    bestAcc = 0.0
+    bestAccParams = {
+        "st_w": SHORT_TERM_WINDOW,
+        "st_s": SHORT_TERM_STEP,
+        "mt_w": MID_TERM_WINDOW,
+        "mt_s": MID_TERM_STEP
+    }
 
-def extract_energy_with_yaafe(filename):
-    
-    #yaafe -r 44100 -f "mfcc: MFCC blockSize=1024 stepSize=512" test.wav
-    h5py.run_tests()
-    #f = h5py.File('myfile.hdf5','r')
 
+    range_mt_max = int( round(max_mt - min_mt, 3) / step_mt)+1
+    range_st_max = int( round(max_st - min_st, 3) / step_st)+1
 
-import librosa
-def extract_energy(filename): #WORKING FUCKKKKKKKKK!!!!!!!
-    
-    # 1ms = 22 samples, so 25ms = 550 samples
-    sig, sample_rate = librosa.load( filename )
-    
-    #Compute root-mean-square (RMS) energy for each frame, either from the audio samples y or from a spectrogram S.
-    energy = librosa.feature.rmse( y=sig, frame_length=550 )
-    #librosa.rmse([audio_signal, spectrogram_magnitude, frame_length, hop_length, ...])
-    
-    return energy
+    for mt in range(0,range_mt_max):
+        print "\n\n\n\n"
 
 
-def extract_pitch(filename):
-    print( 'Extracting pitch for {}'.format(filename) )
+        SHORT_TERM_WINDOW = min_st
+        SHORT_TERM_STEP = round(SHORT_TERM_WINDOW*st_overl, 3)
+        for st in range(0,range_st_max):
 
-    #I've tried to use pyacoustics without success
-    #pyacoustics.intensity_and_pitch.praat_pi.getPraatPitchAndIntensity()
+            # print_parameters(SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP, perc_train, use_svm, "aaa")
 
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(usage=__doc__)
-    parser.add_argument("--order", type=int, default=3, help="order of Bessel function")
-    parser.add_argument("--output", default="plot.png", help="output image file")
-    args = parser.parse_args()
+            # if multiclassifier:
+            #     accuracy = feature_and_train_multiclassifier(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW,
+            #                                       MID_TERM_STEP, perc_train, confusion_matrix_perc, use_svm, VERBOSITY)
+            # else:
+            accuracy = feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+                                 perc_train, confusion_matrix_perc, use_svm, VERBOSITY, "aaaaaaaa")
 
-    # Compute maximum
-    f = lambda x: -special.jv(args.order, x)
-    sol = optimize.minimize(f, 1.0)
+            SHORT_TERM_WINDOW = SHORT_TERM_WINDOW +step_st
+            SHORT_TERM_STEP = round(SHORT_TERM_WINDOW*st_overl, 3)
 
-    # Plot
-    x = np.linspace(0, 10, 5000)
-    plt.plot(x, special.jv(args.order, x), '-', sol.x, -sol.fun, 'o')
+            if accuracy > bestAcc:
+                bestAcc = accuracy
+                bestAccParams["st_w"] = SHORT_TERM_WINDOW
+                bestAccParams["st_s"] = SHORT_TERM_STEP
+                bestAccParams["mt_w"] = MID_TERM_WINDOW
+                bestAccParams["mt_s"] = MID_TERM_STEP
 
-    # Produce output
-    plt.savefig(args.output, dpi=96)
 
-    
+        MID_TERM_WINDOW = MID_TERM_WINDOW+step_mt
+        MID_TERM_STEP = round(MID_TERM_WINDOW*mt_overl, 3)
 
 
+        print "\n\n\nMelhor precisao: {}".format(bestAcc)
+        print "SHORT_TERM_WINDOW = {} \nSHORT_TERM_STEP = {} \nMID_TERM_WINDOW = {} \nMID_TERM_STEP = {}\n\n".format(
+            bestAccParams["st_w"], bestAccParams["st_s"], bestAccParams["mt_w"], bestAccParams["mt_s"])
 
 
-
-    return []
-
-
-import numpy as np
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-from hmmlearn import hmm
-
-
-
-
-
-def training_model_s( features ):
-    import numpy as np
-    from hmmlearn import hmm
-
-    model = hmm.MultinomialHMM(n_components=3)
-    model.startprob_ = np.array([0.3, 0.4, 0.3])
-    model.transmat_ = np.array([[0.2, 0.6, 0.2],
-                                [0.4, 0.0, 0.6],
-                                [0.1, 0.2, 0.7]])
-    model.emissionprob_ = np.array([[0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-                                    [0.1, 0.1, 0.1, 0.1, 0.2, 0.1, 0.1, 0.1, 0.1],
-                                    [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2]])
-
-    # Predict the optimal sequence of internal hidden state
-    X = np.atleast_2d([3, 4, 5, 6, 7]).T
-    print(model.decode(X))
-
-
-
-def training_model( features ):
-    # import warnings
-    # warnings.filterwarnings('ignore')
-
-
-    energy = np.array(features[0])
-    import copy
-    energy_2 = copy.deepcopy(energy)
-
-
-    # quotes = quotes_historical_yahoo_ochl(
-    #     "INTC", datetime.date(1995, 1, 1), datetime.date(2012, 1, 6))
-
-    # Unpack quotes
-    # dates = np.array([q[0] for q in quotes], dtype=int)
-    # close_v = np.array([q[2] for q in quotes])
-    # volume = np.array([q[5] for q in quotes])[1:]
-
-    # Take diff of close value. Note that this makes
-    # ``len(diff) = len(close_t) - 1``, therefore, other quantities also
-    # need to be shifted by 1.
-    # diff = np.diff(close_v)
-    # dates = dates[1:]
-    # close_v = close_v[1:]
-
-    X1 = np.array(features[0])
-    X2 = np.array(features[0])
-    X = np.concatenate([X1, X2])
-    lengths = [len(X1), len(X2)]
-
-
-    # Pack energy and other features for training.
-    #X = np.column_stack([energy, energy_2])
-    #lengths = [len(X[0])]
-    print(X)
-
-    print("fitting to HMM and decoding ...", end="")
-
-    # Make an HMM instance and execute fit
-    model = hmm.GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X, lengths)
-
-    # Predict the optimal sequence of internal hidden state
-    hidden_states = model.predict(X)
-    print(hidden_states)
-
-
-    print("done")
-
-
-
-
-
-
-
-
-    # model = hmm.GaussianHMM(n_components=1, covariance_type="full")
-    # model.energy_ = energy
-    #
-    # X, Z = model.sample(500)
-    # print(X)
-    # print(Z)
-
-
-
-
-
-
-
-    ################### Printing result #################
-    print("Transition matrix")
-    print(model.transmat_)
-    print()
-
-    print("Means and vars of each hidden state")
-    for i in range(model.n_components):
-        print("{0}th hidden state".format(i))
-        print("mean = ", model.means_[i])
-        print("var = ", np.diag(model.covars_[i]))
-        print()
-    ######################################################
-
-    ################# Plot the sampled data #############
-    # plt.plot(X[:, 0], X[:, 1], ".-", label="observations", ms=6, mfc="orange", alpha=0.7)
-    #
-    # # Indicate the component numbers
-    # for i, m in enumerate(means):
-    #     print("{}  {}".format(i, m))
-    #     plt.text(m[0], m[1], 'Component %i' % (i + 1), size=17, horizontalalignment='center',
-    #              bbox=dict(alpha=.7, facecolor='w'))
-    #
-    # plt.legend(loc='best')
-    # plt.show()
-    #
-    # plt.savefig('foo.png')
-    ######################################################
-
-
-def training_model_old( features ):
-
-    ############### old ####################
-    np.random.seed(42)
-    #model = hmm.GaussianHMM(n_components=3, covariance_type="full")
-    #model.startprob_ = np.array([0.6, 0.3, 0.1])
-    #model.transmat_ = np.array([[0.7, 0.2, 0.1], [0.3, 0.5, 0.2], [0.3, 0.3, 0.4]])
-    #model.means_ = np.array([[0.0, 0.0], [3.0, -3.0], [5.0, 10.0]])
-    #model.covars_ = np.tile(np.identity(2), (3, 1, 1))
-    #X, Z = model.sample(500)
-
-    #print(X)
-    #print(Z)
-
-    ########################################
-    
-
-    startprob = np.array([0.6, 0.3, 0.1, 0.0])
-    # The transition matrix, note that there are no transitions possible
-    # between component 1 and 3
-    transmat = np.array([[0.7, 0.2, 0.0, 0.1],
-                         [0.3, 0.5, 0.2, 0.0],
-                         [0.0, 0.3, 0.5, 0.2],
-                         [0.2, 0.0, 0.2, 0.6]])
-
-    # The means of each component
-    means = np.array([[0.0,  0.0],
-                      [0.0, 11.0],
-                      [9.0, 10.0],
-                      [11.0, -1.0]])
-
-    # The covariance of each component
-    covars = .5 * np.tile(np.identity(2), (4, 1, 1))
-
-    # Build an HMM instance and set parameters
-    model = hmm.GaussianHMM(n_components=4, covariance_type="full")
-
-    # Instead of fitting it from the data, we directly set the estimated
-    # parameters, the means and covariance of the components
-    model.startprob_ = startprob
-    model.transmat_ = transmat
-    model.means_ = means
-    model.covars_ = covars
-
-
-    X, Z = model.sample(500)
-    #print(Z)
-    print(X)
-    
-    # Plot the sampled data
-    plt.plot(X[:, 0], X[:, 1], ".-", label="observations", ms=6, mfc="orange", alpha=0.7)
-
-    # Indicate the component numbers
-    for i, m in enumerate(means):
-        print("{}  {}".format(i, m))
-        plt.text(m[0], m[1], 'Component %i' % (i + 1), size=17, horizontalalignment='center', 
-                 bbox=dict(alpha=.7, facecolor='w'))
-
-    plt.legend(loc='best')
-    plt.show()
-
-    plt.savefig('foo.png')
-
-
-def test():
-
-    #from __future__ import print_function
-
-    import datetime
-
-    import numpy as np
-    from matplotlib import cm, pyplot as plt
-    from matplotlib.dates import YearLocator, MonthLocator
-    try:
-        from matplotlib.finance import quotes_historical_yahoo_ochl
-    except ImportError:
-        # For Matplotlib prior to 1.5.
-        from matplotlib.finance import ( quotes_historical_yahoo as quotes_historical_yahoo_ochl )
-
-    from hmmlearn.hmm import GaussianHMM
-
-
-    print(__doc__)
-
-
-
-
-
-
-    print("fitting to HMM and decoding ...", end="")
-
-    # Make an HMM instance and execute fit
-    model = GaussianHMM(n_components=4, covariance_type="diag", n_iter=1000).fit(X)
-
-    # Predict the optimal sequence of internal hidden state
-    hidden_states = model.predict(X)
-
-    print("done")
-
-
-
-
-
-
-
-def read_all_audio_files_from_path( path ):
-    ret = os.listdir(path)
-
-    filenames = []
-    for name in ret:
-        filenames.append(path+name)
-
-    return filenames
 
 if __name__ == '__main__':
+
+    PROJECT_PATH = "/mnt/c/dev/emotion_speech_recognition/"
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db", required=True, choices=['portuguese', 'german'], help="Which audio DB to use. Options are: portuguese or german")
+    parser.add_argument("--train", help="Train the machine.", action="store_true")
+    parser.add_argument("--test", help="Test the model.", action="store_true")
+    parser.add_argument("--multiclassifier", help="Use multiclassifier model.", action="store_true")
+
+    # parser.add_argument("-p", action="store_true")
+
+    args = parser.parse_args()
+
+    print('\n===========================')
     print('Starting program...')
+    print('===========================\n')
 
-    path_to_read_files = '/root/dev/emotion_speech_recognition/audio_sample/'
-    # path_to_read_files = 'C:\dev\emotion_speech_recognition\\audio_sample\\'
-    filenames = read_all_audio_files_from_path(path_to_read_files)
 
-    for filename in filenames:
-        ftrs = []
-        ftrs.append( extract_energy(filename) )
+    # ============ PARAMETER DEFINITIONS ==============================================================================
 
-        #pitch = extract_pitch(filename)
-        #extract_mfcc(filename)
+    model_name = ""
+    if args.db == "german":
+        if args.multiclassifier:
+            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_multi/'
+            TEST_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_multi_test/'
+            model_name = "german_multi"
+        else:
+            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/german_emo/'
+            TEST_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_test/'
+            model_name = "german_single"
+    else:
+        if args.multiclassifier:
+            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_multi/'
+            TEST_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_multi_test/'
+            model_name = "port_multi"
+        else:
+            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/portuguese/'
+            TEST_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_test/'
+            model_name = "port_single"
 
-        #print( ftrs )
+    if args.db:
+        if args.train:
+            if args.test:
+                parser.error("You can't use test or testfile when using train flag!")
+            else:
+                brute_force_training(False)
+                train_SVM(model_name)
+                # train_KNN(model_name)
 
-        training_model( ftrs )
-        # test()
+        elif args.test:
+            use_svm = True
+            test_model(TEST_PREFIX, model_name, use_svm)
 
-        break
+        else:
+            parser.error("You should specify to train or test with flags --train or --test")
+    else:
+        parser.error("You should specify which audio db to use with flag --db portuguese or --db german")
 
-    # extract_parameters()
-    # extract_chromagram("/root/tcc/extraction/audio_samples/teste2-2.wav")
-    
+
+
+    # python cmd to split audios into smaller audios
+    # python /mnt/c/dev/emotion_speech_recognition/src/dependencies/pyAudioAnalysis/audacityAnnotation2WAVs.py -d /mnt/c/dev/emotion_speech_recognition/audio_sample_to_split /mnt/c/dev/emotion_speech_recognition/audio_samples/
+
+
+
+
+    print('\n===========================')
     print('Ending program...')
-
+    print('===========================\n')
