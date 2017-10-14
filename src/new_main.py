@@ -210,7 +210,7 @@ def train_models(multiclassifier):
 
     confusion_matrix_perc = True
     use_svm = True
-    # use_svm = False
+    # USE_SVM = False
     perc_train = 0.75
     VERBOSITY = False
 
@@ -234,7 +234,7 @@ def train_models(multiclassifier):
         SHORT_TERM_STEP = round(SHORT_TERM_WINDOW*st_overl, 3)
         for st in range(0,range_st_max):
 
-            # print_parameters(SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP, perc_train, use_svm, "aaa")
+            # print_parameters(SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP, perc_train, USE_SVM, "aaa")
 
             if multiclassifier:
                 accuracy = feature_and_train_multiclassifier(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW,

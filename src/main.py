@@ -48,9 +48,10 @@ def feature_and_train(samples_prefix, st_w, st_s, mt_w, mt_s, perc_train, confus
     print "Finished in {:10.2f} seconds".format(end-start)
     return bestAcc
 
-def test_model(prefix, model, use_svm):
+def test_model(prefix, model):
     dirs = os.listdir(prefix)
 
+    use_svm = True
     model = ("models/SVM_" + model) if use_svm else ("models/KNN_" + model)
 
     print "\nTesting model: {}".format(model)
@@ -112,21 +113,31 @@ def test_file(filename_to_test, model_name, use_svm=True):
         print "File doesnt exists: {}".format(filename_to_test)
         return None
 
-def train_SVM(model_name):
+def train_SVM(samples_prefix, model_name):
+
+    # ======= PORTUGUESE BEST CONFIGURATION ========
+    # SHORT_TERM_WINDOW = 0.083
+    # SHORT_TERM_STEP = 0.033
+    # MID_TERM_WINDOW = 1.2
+    # MID_TERM_STEP = 0.6
+    # ======= PORTUGUESE BEST CONFIGURATION ========
+
+    # ======= GERMAN BEST CONFIGURATION ========
     SHORT_TERM_WINDOW = 0.036
     SHORT_TERM_STEP = 0.012
     MID_TERM_WINDOW = 1.3
     MID_TERM_STEP = 0.65
+    # ======= GERMAN BEST CONFIGURATION ========
 
     confusion_matrix_perc = True
     use_svm = True
     perc_train = 0.75
     VERBOSITY = False
 
-    feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+    feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
                                  perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
-def train_KNN(model_name):
+def train_KNN(samples_prefix, model_name):
     SHORT_TERM_WINDOW = 0.036
     SHORT_TERM_STEP = 0.012
     MID_TERM_WINDOW = 1.3
@@ -137,13 +148,13 @@ def train_KNN(model_name):
     perc_train = 0.75
     VERBOSITY = False
 
-    feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+    feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
                                  perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
 
 
 
-def brute_force_training(multiclassifier):
+def brute_force_training(samples_prefix):
     min_st   = 0.020
     max_st   = 0.100
     step_st  = 0.001
@@ -173,7 +184,6 @@ def brute_force_training(multiclassifier):
         "mt_s": MID_TERM_STEP
     }
 
-
     range_mt_max = int( round(max_mt - min_mt, 3) / step_mt)+1
     range_st_max = int( round(max_st - min_st, 3) / step_st)+1
 
@@ -185,13 +195,9 @@ def brute_force_training(multiclassifier):
         SHORT_TERM_STEP = round(SHORT_TERM_WINDOW*st_overl, 3)
         for st in range(0,range_st_max):
 
-            # print_parameters(SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP, perc_train, use_svm, "aaa")
+            # print_parameters(SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP, perc_train, USE_SVM, "aaa")
 
-            # if multiclassifier:
-            #     accuracy = feature_and_train_multiclassifier(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW,
-            #                                       MID_TERM_STEP, perc_train, confusion_matrix_perc, use_svm, VERBOSITY)
-            # else:
-            accuracy = feature_and_train(SAMPLES_PREFIX, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+            accuracy = feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
                                  perc_train, confusion_matrix_perc, use_svm, VERBOSITY, "aaaaaaaa")
 
             SHORT_TERM_WINDOW = SHORT_TERM_WINDOW +step_st
@@ -223,9 +229,6 @@ if __name__ == '__main__':
     parser.add_argument("--db", required=True, choices=['portuguese', 'german'], help="Which audio DB to use. Options are: portuguese or german")
     parser.add_argument("--train", help="Train the machine.", action="store_true")
     parser.add_argument("--test", help="Test the model.", action="store_true")
-    parser.add_argument("--multiclassifier", help="Use multiclassifier model.", action="store_true")
-
-    # parser.add_argument("-p", action="store_true")
 
     args = parser.parse_args()
 
@@ -234,40 +237,27 @@ if __name__ == '__main__':
     print('===========================\n')
 
 
-    # ============ PARAMETER DEFINITIONS ==============================================================================
-
-    model_name = ""
+    MODEL_NAME = ""
     if args.db == "german":
-        if args.multiclassifier:
-            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_multi/'
-            TEST_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_multi_test/'
-            model_name = "german_multi"
-        else:
-            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/german_emo/'
-            TEST_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_test/'
-            model_name = "german_single"
+        SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/german_emo/'
+        TEST_PREFIX = PROJECT_PATH + 'audio_samples/german_emo_test/'
+        MODEL_NAME = "german_single"
     else:
-        if args.multiclassifier:
-            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_multi/'
-            TEST_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_multi_test/'
-            model_name = "port_multi"
-        else:
-            SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/portuguese/'
-            TEST_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_test/'
-            model_name = "port_single"
+        SAMPLES_PREFIX = PROJECT_PATH + 'audio_samples/portuguese/'
+        TEST_PREFIX = PROJECT_PATH + 'audio_samples/portuguese_test/'
+        MODEL_NAME = "port_single"
 
     if args.db:
         if args.train:
             if args.test:
-                parser.error("You can't use test or testfile when using train flag!")
+                parser.error("You can't use test and train flag at the same time!")
             else:
-                brute_force_training(False)
-                train_SVM(model_name)
-                # train_KNN(model_name)
+                # brute_force_training(SAMPLES_PREFIX)
+                train_SVM(SAMPLES_PREFIX, MODEL_NAME)
+                # train_KNN(SAMPLES_PREFIX, MODEL_NAME)
 
         elif args.test:
-            use_svm = True
-            test_model(TEST_PREFIX, model_name, use_svm)
+            test_model(TEST_PREFIX, MODEL_NAME)
 
         else:
             parser.error("You should specify to train or test with flags --train or --test")
