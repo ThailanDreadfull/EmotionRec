@@ -107,7 +107,10 @@ def test_file(filename_to_test, model_name, use_svm=True):
                     chosenClass = classNames[i]
 
         end = time.time()
+
+        # DEBUG
         # print "\n\nThe audio file was classified as {} with prob {}% in {:10.2f} seconds\n\n".format(chosenClass, round(chosen*100, 2), end - start )
+
         return chosenClass
     else:
         print "File doesnt exists: {}".format(filename_to_test)
@@ -116,17 +119,17 @@ def test_file(filename_to_test, model_name, use_svm=True):
 def train_SVM(samples_prefix, model_name):
 
     # ======= PORTUGUESE BEST CONFIGURATION ========
-    # SHORT_TERM_WINDOW = 0.083
-    # SHORT_TERM_STEP = 0.033
-    # MID_TERM_WINDOW = 1.2
-    # MID_TERM_STEP = 0.6
+    SHORT_TERM_WINDOW = 0.083
+    SHORT_TERM_STEP = 0.033
+    MID_TERM_WINDOW = 1.2
+    MID_TERM_STEP = 0.6
     # ======= PORTUGUESE BEST CONFIGURATION ========
 
     # ======= GERMAN BEST CONFIGURATION ========
-    SHORT_TERM_WINDOW = 0.036
-    SHORT_TERM_STEP = 0.012
-    MID_TERM_WINDOW = 1.3
-    MID_TERM_STEP = 0.65
+    # SHORT_TERM_WINDOW = 0.036
+    # SHORT_TERM_STEP = 0.012
+    # MID_TERM_WINDOW = 1.3
+    # MID_TERM_STEP = 0.65
     # ======= GERMAN BEST CONFIGURATION ========
 
     confusion_matrix_perc = True
@@ -158,10 +161,10 @@ def brute_force_training(samples_prefix):
     min_st   = 0.020
     max_st   = 0.100
     step_st  = 0.001
-    st_overl = 0.4
+    st_overl = 0.33
 
     min_mt   = 1.200
-    max_mt   = 2.1
+    max_mt   = 3.000
     step_mt  = 0.100
     mt_overl = 0.5
 
