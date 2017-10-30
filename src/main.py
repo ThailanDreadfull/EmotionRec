@@ -2,13 +2,11 @@
 
 import os
 from collections import OrderedDict
-from sys import platform
 from pyAudioAnalysis import audioTrainTest as aT
 import argparse
 import time
 import sys
 sys.path.append('C:\dev\emotion_speech_recognition\src\dependencies\pyAudioAnalysis')
-
 
 def print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name):
     print "\n=============== {} ================".format( "SVM" if use_svm else "KNN")
@@ -23,7 +21,6 @@ def print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name):
 
 def feature_and_train(samples_prefix, st_w, st_s, mt_w, mt_s, perc_train, confusion_matrix_perc, use_svm, verbosity, model_name):
     start = time.time()
-
     list_of_dirs_or_classes = []
     dirs = [d for d in os.listdir(samples_prefix) if os.path.isdir(os.path.join(samples_prefix, d))]
     for dire in dirs:
@@ -31,9 +28,7 @@ def feature_and_train(samples_prefix, st_w, st_s, mt_w, mt_s, perc_train, confus
 
     if use_svm:
         print "Starting training..."
-
         model_name = "models/SVM_"+model_name
-
         print_parameters(st_w, st_s, mt_w, mt_s, perc_train, use_svm, model_name)
         bestParam, bestAcc = aT.featureAndTrain(list_of_dirs_or_classes, mt_w, mt_s, st_w, st_s, "svm", model_name, False, perc_train, confusion_matrix_perc, verbosity=verbosity)
     else:
@@ -72,7 +67,6 @@ def test_model(prefix, model):
 
         print "{}\t".format(classs[:4]),
         for file in files:
-            #test file
             file_to_test = prefix+classs+"/"+file
             class_classified = test_file(file_to_test, model, use_svm)
             classified[class_classified] = classified[class_classified]+1
@@ -87,18 +81,16 @@ def test_model(prefix, model):
     print "General precision is {}".format( round(total_correct/float(total_files)*100,2) )
 
 def test_file(filename_to_test, model_name, use_svm=True):
-
     if os.path.isfile(filename_to_test):
         start = time.time()
         if use_svm:
             r, P, classNames = aT.fileClassification(filename_to_test, model_name, "svm")
-            # print filename_to_test
-            # print P
         else:
             r, P, classNames = aT.fileClassification(filename_to_test, model_name, "svm")
 
         chosen = 0.0
         chosenClass = ""
+
         if len(P) == len(classNames):
             for i in range(0, len(P), 1):
 
@@ -107,29 +99,45 @@ def test_file(filename_to_test, model_name, use_svm=True):
                     chosenClass = classNames[i]
 
         end = time.time()
-
         # DEBUG
         # print "\n\nThe audio file was classified as {} with prob {}% in {:10.2f} seconds\n\n".format(chosenClass, round(chosen*100, 2), end - start )
-
         return chosenClass
     else:
         print "File doesnt exists: {}".format(filename_to_test)
         return None
 
+def train_until_get_better_acc(samples_prefix, model_name):
+
+    best_acc = 0
+    for i in range(0,1000):
+        accuracy = train_SVM(samples_prefix, model_name)
+        print "\nCurrent accuracy: {}".format(accuracy)
+        print "Best accuracy: {}\n\n".format(best_acc)
+
+        if accuracy > best_acc:
+            prefix = samples_prefix+"../../src/models/"
+            os.rename(prefix+"SVM_port_single", prefix+"best_SVM_port_single")
+            os.rename(prefix+"SVM_port_single.arff", prefix+"best_SVM_port_single.arff")
+            os.rename(prefix+"SVM_port_singleMEANS", prefix+"best_SVM_port_singleMEANS")
+            best_acc = accuracy
+
+        if accuracy >= 84.6:
+            break
+
 def train_SVM(samples_prefix, model_name):
 
     # ======= PORTUGUESE BEST CONFIGURATION ========
-    SHORT_TERM_WINDOW = 0.083
+    SHORT_TERM_WINDOW = 0.1
     SHORT_TERM_STEP = 0.033
     MID_TERM_WINDOW = 1.2
     MID_TERM_STEP = 0.6
     # ======= PORTUGUESE BEST CONFIGURATION ========
 
     # ======= GERMAN BEST CONFIGURATION ========
-    # SHORT_TERM_WINDOW = 0.036
-    # SHORT_TERM_STEP = 0.012
-    # MID_TERM_WINDOW = 1.3
-    # MID_TERM_STEP = 0.65
+    SHORT_TERM_WINDOW = 0.036
+    SHORT_TERM_STEP = 0.012
+    MID_TERM_WINDOW = 1.3
+    MID_TERM_STEP = 0.65
     # ======= GERMAN BEST CONFIGURATION ========
 
     confusion_matrix_perc = True
@@ -137,7 +145,7 @@ def train_SVM(samples_prefix, model_name):
     perc_train = 0.75
     VERBOSITY = False
 
-    feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
+    return feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
                                  perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
 def train_KNN(samples_prefix, model_name):
@@ -154,16 +162,13 @@ def train_KNN(samples_prefix, model_name):
     feature_and_train(samples_prefix, SHORT_TERM_WINDOW, SHORT_TERM_STEP, MID_TERM_WINDOW, MID_TERM_STEP,
                                  perc_train, confusion_matrix_perc, use_svm, VERBOSITY, model_name)
 
-
-
-
 def brute_force_training(samples_prefix):
     min_st   = 0.020
     max_st   = 0.100
     step_st  = 0.001
     st_overl = 0.33
 
-    min_mt   = 1.200
+    min_mt   = 1.000
     max_mt   = 3.000
     step_mt  = 0.100
     mt_overl = 0.5
@@ -255,7 +260,8 @@ if __name__ == '__main__':
             if args.test:
                 parser.error("You can't use test and train flag at the same time!")
             else:
-                # brute_force_training(SAMPLES_PREFIX)
+                #brute_force_training(SAMPLES_PREFIX)
+                # train_until_get_better_acc(SAMPLES_PREFIX, MODEL_NAME)
                 train_SVM(SAMPLES_PREFIX, MODEL_NAME)
                 # train_KNN(SAMPLES_PREFIX, MODEL_NAME)
 
